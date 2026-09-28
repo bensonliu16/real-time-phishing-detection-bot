@@ -7,7 +7,7 @@ response flows and deploys as a small Flask webhook application.
 ## Features
 
 - Accepts URLs through LINE messages
-- Requests URL reputation and threat details from the Check Point API
+- Requests URL reputation and threat details from a threat-intelligence API
 - Returns classification, risk, categories, protection, and indication data
 - Formats results as LINE Flex Messages
 - Includes English and Chinese response modules
@@ -47,7 +47,9 @@ response flows and deploys as a small Flask webhook application.
    ```text
    LINE_CHANNEL_ACCESS_TOKEN
    LINE_CHANNEL_SECRET
-   CHECKPOINT_CLIENT_KEY
+   THREAT_API_CLIENT_KEY
+   THREAT_API_TOKEN_URL
+   THREAT_API_REPUTATION_URL
    ```
 
 4. Start the application:
@@ -69,5 +71,4 @@ replacement before running the project.
 
 ## Built with
 
-Python · Flask · LINE Bot SDK · Check Point URL Reputation API
-
+Python · Flask · LINE Bot SDK · Threat Intelligence API

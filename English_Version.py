@@ -7,8 +7,10 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
 
-cp_token = ''
-client_key = os.getenv('CHECKPOINT_CLIENT_KEY', '')
+threat_api_token = ''
+threat_api_client_key = os.getenv('THREAT_API_CLIENT_KEY', '')
+threat_api_token_url = os.getenv('THREAT_API_TOKEN_URL', '')
+threat_api_reputation_url = os.getenv('THREAT_API_REPUTATION_URL', '')
 debug_print_enabled = False
 
 def debug_print(msg):
@@ -16,31 +18,34 @@ def debug_print(msg):
     if debug_print_enabled:
         print(msg)
 
-def cp_get_token():
-    global client_key, cp_token
-    url = 'https://rep.checkpoint.com/rep-auth/service/v1.0/request'
-    headers = {'Client-Key': client_key}
-    response = requests.get(url, headers=headers)
+def get_threat_api_token():
+    global threat_api_client_key, threat_api_token
+    headers = {'Client-Key': threat_api_client_key}
+    response = requests.get(threat_api_token_url, headers=headers)
     if response.status_code == 200:
-        cp_token = str(response.text)
+        threat_api_token = str(response.text)
     else:
-        debug_print(cp_token)
+        debug_print(threat_api_token)
 
-def cp_get_url_rep(url_str):
-    global client_key, cp_token
-    cp_get_token()
-    url = f'https://rep.checkpoint.com/url-rep/service/v2.0/query?resource={url_str}'
+def get_url_reputation(url_str):
+    global threat_api_client_key, threat_api_token
+    get_threat_api_token()
     headers = {
-        'Client-Key': client_key,
+        'Client-Key': threat_api_client_key,
         'Content-Type': 'application/json',
-        'token': cp_token
+        'token': threat_api_token
     }
     data = {
         'request': [
             {'resource': url_str}
         ]
     }
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(
+        threat_api_reputation_url,
+        headers=headers,
+        json=data,
+        params={'resource': url_str},
+    )
     json_data = response.json()
     debug_print(json_data)
     categories = ''
@@ -110,7 +115,7 @@ def handle_message(event):
 
     if user_message.startswith("/url "):
         url = user_message[5:].strip()  # Extract the URL after "/url "
-        url_info = cp_get_url_rep(url)
+        url_info = get_url_reputation(url)
 
         if url_info:
             light_color = get_light_color(url_info['classification'], url_info['risk'])
