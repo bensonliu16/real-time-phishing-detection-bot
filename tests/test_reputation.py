@@ -57,9 +57,7 @@ def load_reputation_module():
     fake_requests.get = lambda *_args, **_kwargs: FakeResponse()
     fake_requests.post = lambda *_args, **_kwargs: FakeResponse()
 
-    repository_copy = Path(__file__).parents[1] / "English_Version.py"
-    local_original = Path(r"C:\linebot\English_Version.py")
-    module_path = repository_copy if repository_copy.exists() else local_original
+    module_path = Path(__file__).parents[1] / "English_Version.py"
 
     environment = {
         "LINE_CHANNEL_ACCESS_TOKEN": "test-line-token",

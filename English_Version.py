@@ -1,4 +1,5 @@
 import os
+import re
 
 import json
 import requests
@@ -109,113 +110,131 @@ def get_light_color(classification, risk):
         return "green"
 
 
+URL_PATTERN = re.compile(r"(?i)\b(?:https?://|www\.)[^\s<>\"']+")
+
+
+def extract_url(message):
+    """Return the first web link found anywhere in a text message."""
+    match = URL_PATTERN.search(message)
+    if not match:
+        return None
+
+    url = match.group(0).rstrip(".,!?;:)]}")
+    if url.lower().startswith("www."):
+        url = "https://" + url
+    return url
+
+
+def build_flex_message(url_info):
+    light_color = get_light_color(url_info['classification'], url_info['risk'])
+    light_images = {
+        "red": "https://www.pngall.com/wp-content/uploads/14/Red-Light-PNG-Cutout.png",
+        "yellow": "https://png.pngtree.com/png-clipart/20201029/ourmid/pngtree-circle-clipart-orange-yellow-circle-png-image_2381941.jpg",
+        "green": "https://www.pngall.com/wp-content/uploads/14/Green-Circle-PNG-Images.png"
+    }
+    contents = {
+        "type": "bubble",
+        "hero": {
+            "type": "image",
+            "url": light_images[light_color],
+            "size": "full",
+            "aspectRatio": "1:1",
+            "aspectMode": "cover"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "SilverSafe",
+                    "weight": "bold",
+                    "size": "xl",
+                    "contents": []
+                },
+                {
+                    "type": "text",
+                    "text": f"URL: {url_info['url']}",
+                    "size": "xl",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": f"Classification: {url_info['classification']}",
+                    "size": "xl",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": f"Confidence: {url_info['confidence']}",
+                    "size": "xl",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": f"Risk: {url_info['risk']}",
+                    "size": "xl",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": f"Categories: {url_info['categories']}",
+                    "size": "xl",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": f"Indications: {url_info['indications']}",
+                    "size": "xl",
+                    "wrap": True
+                }
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "action": {
+                        "type": "uri",
+                        "uri": "https://www.fdic.gov/consumer-resource-center/2021-10/avoiding-scams-and-scammers",
+                        "label": "How to avoid online scams?"
+                    }
+                }
+            ],
+            "flex": 0
+        }
+    }
+    return FlexSendMessage(alt_text="URL Information", contents=contents)
+
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    user_message = event.message.text
+    url = extract_url(event.message.text)
+    if not url:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="Please send a message containing a web link."),
+        )
+        return
 
-    if user_message.startswith("/url "):
-        url = user_message[5:].strip()  # Extract the URL after "/url "
-        url_info = get_url_reputation(url)
+    url_info = get_url_reputation(url)
+    if not url_info:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="Unable to retrieve information for the detected URL."),
+        )
+        return
 
-        if url_info:
-            light_color = get_light_color(url_info['classification'], url_info['risk'])
-
-            # Define image URLs for each light color
-            light_images = {
-                "red": "https://www.pngall.com/wp-content/uploads/14/Red-Light-PNG-Cutout.png",
-                "yellow": "https://png.pngtree.com/png-clipart/20201029/ourmid/pngtree-circle-clipart-orange-yellow-circle-png-image_2381941.jpg",
-                "green": "https://www.pngall.com/wp-content/uploads/14/Green-Circle-PNG-Images.png"
-            }
-
-            flex_message = {
-                "type": "bubble",
-                "hero": {
-                    "type": "image",
-                    "url": light_images[light_color],
-                    "size": "full",
-                    "aspectRatio": "1:1",
-                    "aspectMode": "cover"
-                },
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "SilverSafe",
-                            "weight": "bold",
-                            "size": "xl",
-                            "contents": []
-                        },
-                        {
-                            "type": "text",
-                            "text": f"URL: {url_info['url']}",
-                            "size": "xl",
-                            "wrap": True
-                        },
-                        {
-                            "type": "text",
-                            "text": f"Classification: {url_info['classification']}",
-                            "size": "xl",
-                            "wrap": True
-                        },
-                        {
-                            "type": "text",
-                            "text": f"Confidence: {url_info['confidence']}",
-                            "size": "xl",
-                            "wrap": True
-                        },
-                        {
-                            "type": "text",
-                            "text": f"Risk: {url_info['risk']}",
-                            "size": "xl",
-                            "wrap": True
-                        },
-                        {
-                            "type": "text",
-                            "text": f"Categories: {url_info['categories']}",
-                            "size": "xl",
-                            "wrap": True
-                        },
-                        {
-                            "type": "text",
-                            "text": f"Indications: {url_info['indications']}",
-                            "size": "xl",
-                            "wrap": True
-                        }
-                    ]
-                },
-                "footer": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "height": "sm",
-                            "action": {
-                                "type": "uri",
-                                "uri": "https://www.fdic.gov/consumer-resource-center/2021-10/avoiding-scams-and-scammers",
-                                "label": "How to avoid online scams?"
-                            }
-                        }
-                    ],
-                    "flex": 0
-                }
-            }
-
-            flex_message = FlexSendMessage(alt_text="URL Information", contents=flex_message)
-            line_bot_api.reply_message(event.reply_token, flex_message)
-        else:
-            response = "Unable to retrieve information for the given URL."
-
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=response))
-    else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="Please use the format '/url <your_url>' to get URL information."))
+    line_bot_api.reply_message(event.reply_token, build_flex_message(url_info))
 
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
 
 

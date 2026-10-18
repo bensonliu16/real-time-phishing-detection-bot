@@ -14,6 +14,7 @@ details, QR codes, or private conversation history are included.
 ## What I built
 
 - URL reputation lookup through a configurable threat-intelligence API
+- Automatic extraction of a web link from a normal text message
 - Red, yellow, and green classification logic
 - LINE Flex Message output with classification, confidence, risk, categories,
   and threat indications
@@ -28,10 +29,10 @@ The earliest version was a basic echo and rich-message bot. I then connected the
 bot to a URL-reputation API and tested the prototype with roughly 200 people in
 my extended network.
 
-That feedback exposed two usability problems: requiring `/url` before every
-address was easy to forget, and the original report displayed too much detail.
-The next development goal is therefore URL extraction from normal messages and
-a shorter traffic-light response.
+That feedback exposed a usability problem: requiring `/url` before every
+address was easy to forget. I updated the English version to find a web link
+inside a normal message automatically, so users can paste or forward suspicious
+text without learning a special command.
 
 The repository keeps the earlier LINE feature experiments because they show how
 the project developed. The phishing-specific implementation is in
@@ -40,17 +41,19 @@ the project developed. The phishing-specific implementation is in
 
 ## Current flow
 
-1. A user sends `/url <address>` to the LINE bot.
+1. A user sends or forwards any text message containing a web link, such as
+   `Congrats! You won a $500 shopping prize. Claim it at https://prize.example/claim-now!`
 2. LINE sends the signed webhook request to the Flask application.
-3. The application requests reputation data from the configured service.
-4. The response is converted into a red, yellow, or green result.
-5. The bot returns a LINE Flex Message with the available details.
+3. The English version extracts the first web link from the message.
+4. The application requests reputation data from the configured service.
+5. The response is converted into a red, yellow, or green result.
+6. The bot returns a LINE Flex Message with the available details.
 
 ## Project structure
 
 ```text
 .
-|-- English_Version.py     # English phishing-detection prototype
+|-- English_Version.py     # English entry point with automatic URL extraction
 |-- Chinese_Version.py     # Parallel language prototype
 |-- app.py                 # Earlier LINE webhook experiments
 |-- Function.py            # Earlier rich-message experiments
@@ -86,8 +89,9 @@ the project developed. The phishing-specific implementation is in
 ## Tests
 
 The tests use local fakes rather than real credentials or network calls. They
-cover dangerous, uncertain, and benign classifications; API token handling;
-and parsing of complete and partial reputation responses.
+cover URL extraction from normal messages; dangerous, uncertain, and benign
+classifications; API token handling; and parsing of complete and partial
+reputation responses.
 
 ```bash
 python -m unittest discover -s tests -v
